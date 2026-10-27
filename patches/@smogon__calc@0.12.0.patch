@@ -1,0 +1,120 @@
+diff --git a/dist/mechanics/champions.js b/dist/mechanics/champions.js
+index d5cbf6e6d44f2396cb1306611cb5d61c9e419fbc..3ac3f3c585d446d58e48fa11940de857f1f43bb8 100644
+--- a/dist/mechanics/champions.js
++++ b/dist/mechanics/champions.js
+@@ -23,7 +23,7 @@ function calculateChampions(gen, attacker, defender, move, field) {
+         attacker.boosts.spa += attacker.hasAbility('Contrary') ? -1 : 1;
+         attacker.boosts.spa = Math.min(6, Math.max(-6, attacker.boosts.spa));
+     }
+-    (0, util_2.computeFinalStats)(gen, attacker, defender, field, 'atk', 'spa');
++    (0, util_2.computeFinalStats)(gen, attacker, defender, field, 'atk', 'spa', 'spe');
+     (0, util_2.checkInfiltrator)(attacker, field.defenderSide);
+     (0, util_2.checkInfiltrator)(defender, field.attackerSide);
+     var desc = {
+@@ -152,6 +152,11 @@ function calculateChampions(gen, attacker, defender, move, field) {
+         }
+     }
+     move.type = type;
++    // The new Protean/Libero trigger changes current type before terrain/STAB.
++    if (attacker.hasAbility('Protean', 'Libero') && attacker.abilityOn) {
++        attacker.types = [type];
++        attacker.species = Object.assign({}, attacker.species, {types: [type]});
++    }
+     var isGhostRevealed = attacker.hasAbility('Scrappy');
+     var type1Effectiveness = (0, util_2.getMoveEffectiveness)(gen, move, defender.types[0], isGhostRevealed, field.isGravity, false);
+     var type2Effectiveness = defender.types[1]
+@@ -415,6 +420,8 @@ function calculateBasePowerChampions(gen, attacker, defender, move, field, hasAt
+ exports.calculateBasePowerChampions = calculateBasePowerChampions;
+ function calculateBPModsChampions(gen, attacker, defender, move, field, desc, basePower, hasAteAbilityTypeChange, turnOrder, hit) {
+     var bpMods = [];
++    // Champions Lab: apply the allied Steel boost in the fixed-point BP chain.
++    if (field.attackerSide.isSteelySpirit && move.hasType('Steel')) bpMods.push(6144);
+     var defenderItem = (defender.item && defender.item !== '')
+         ? defender.item : defender.disabledItem;
+     var resistedKnockOffDamage = !defenderItem;
+@@ -499,7 +506,7 @@ function calculateBPModsChampions(gen, attacker, defender, move, field, desc, ba
+         (attacker.hasAbility('Sand Force') &&
+             field.hasWeather('Sand') && move.hasType('Rock', 'Ground', 'Steel')) ||
+         (attacker.hasAbility('Analytic') &&
+-            (turnOrder !== 'first' || field.defenderSide.isSwitching === 'out' || attacker.abilityOn)) ||
++            attacker.abilityOn) ||
+         (attacker.hasAbility('Tough Claws') && move.flags.contact)) ||
+         (attacker.hasAbility('Punk Rock') && move.flags.sound)) {
+         bpMods.push(5325);
+@@ -769,7 +776,7 @@ function calculateFinalModsChampions(gen, attacker, defender, move, field, desc,
+         finalMods.push(3072);
+         desc.defenderAbility = defender.ability;
+     }
+-    if (field.defenderSide.isFriendGuard) {
++    if (field.defenderSide.isFriendGuard && !attacker.hasAbility('Mold Breaker')) {
+         finalMods.push(3072);
+         desc.isFriendGuard = true;
+     }
+diff --git a/dist/mechanics/util.js b/dist/mechanics/util.js
+index 930d91e22ddac69e14981674eca454a8cb680505..ffd055f47dd6858f4638870556d656bfb9ae6f78 100644
+--- a/dist/mechanics/util.js
++++ b/dist/mechanics/util.js
+@@ -251,6 +251,26 @@ function checkRawStatChanges(pokemon, powerTrickActive, wonderRoomActive) {
+ }
+ exports.checkRawStatChanges = checkRawStatChanges;
+ function checkIntimidate(gen, source, target) {
++    if (gen.num !== 0) return legacyIntimidate(gen, source, target);
++    if (!source.hasAbility('Intimidate') || !source.abilityOn) return;
++    if (target.hasItem('Clear Amulet') || target.hasAbility('Clear Body', 'White Smoke', 'Hyper Cutter', 'Full Metal Body', 'Inner Focus', 'Own Tempo', 'Oblivious', 'Scrappy')) return;
++    if (target.hasAbility('Mirror Armor')) {
++        if (target.boosts.atk > -6 && !source.hasItem('Clear Amulet')) source.boosts.atk = Math.max(-6, source.boosts.atk - 1);
++        return;
++    }
++    if (target.hasAbility('Contrary', 'Guard Dog')) {
++        target.boosts.atk = Math.min(6, target.boosts.atk + 1);
++        return;
++    }
++    var previous = target.boosts.atk;
++    target.boosts.atk = Math.max(-6, previous - (target.hasAbility('Simple') ? 2 : 1));
++    if (target.boosts.atk < previous) {
++        if (target.hasAbility('Rattled')) target.boosts.spe = Math.min(6, target.boosts.spe + 1);
++        if (target.hasAbility('Defiant')) target.boosts.atk = Math.min(6, target.boosts.atk + 2);
++        if (target.hasAbility('Competitive')) target.boosts.spa = Math.min(6, target.boosts.spa + 2);
++    }
++}
++function legacyIntimidate(gen, source, target) {
+     var blocked = target.hasAbility('Clear Body', 'White Smoke', 'Hyper Cutter', 'Full Metal Body') ||
+         ((gen.num >= 8 || gen.num === 0) &&
+             target.hasAbility('Inner Focus', 'Own Tempo', 'Oblivious', 'Scrappy')) ||
+@@ -403,7 +423,15 @@ function checkMultihitBoost(gen, attacker, defender, move, field, desc, attacker
+         }
+     }
+     if (defender.hasAbility('Seed Sower')) {
++        var terrainChanged = !field.hasTerrain('Grassy');
+         field.terrain = 'Grassy';
++        if (gen.num === 0 && terrainChanged) {
++            // Terrain-change items activate on both participants before the next hit.
++            // checkSeedBoost consumes each seed, preventing repeated boosts on later hits.
++            checkSeedBoost(attacker, field);
++            checkSeedBoost(defender, field);
++            computeFinalStats(gen, attacker, defender, field, 'def', 'spd');
++        }
+     }
+     if (defender.hasAbility('Sand Spit')) {
+         field.weather = 'Sand';
+@@ -590,7 +618,7 @@ function getStabMod(pokemon, move, desc) {
+     if (pokemon.hasOriginalType(move.type)) {
+         stabMod += 2048;
+     }
+-    else if (pokemon.hasAbility('Protean', 'Libero') && !pokemon.teraType) {
++    else if (pokemon.hasAbility('Protean', 'Libero') && (pokemon.gen.num !== 0 || pokemon.abilityOn) && !pokemon.teraType) {
+         stabMod += 2048;
+         desc.attackerAbility = pokemon.ability;
+     }
+diff --git a/dist/pokemon.js b/dist/pokemon.js
+index 5bd5a175c686de1de52fc7335a18ec73a369341b..abf7eaef0dcab79633978d5894ed18b5b1d6cbb9 100644
+--- a/dist/pokemon.js
++++ b/dist/pokemon.js
+@@ -33,6 +33,7 @@ var Pokemon = (function () {
+         if (options === void 0) { options = {}; }
+         var _b;
+         this.species = (0, util_1.extend)(true, {}, gen.species.get((0, util_1.toID)(name)), options.overrides);
++        if (gen.num === 0 && options.overrides && options.overrides.types) this.species.types = options.overrides.types.slice();
+         this.gen = gen;
+         this.name = options.name || name;
+         this.types = this.species.types;

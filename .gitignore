@@ -1,0 +1,12 @@
+node_modules/
+dist/
+coverage/
+.env*
+*.local
+*.log
+*.tsbuildinfo
+.DS_Store
+.openai/
+.pdos/
+test-results/
+playwright-report/

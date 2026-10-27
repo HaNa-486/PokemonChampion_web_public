@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80" role="img" aria-labelledby="title">
+  <title id="title">Original geometric demo token</title>
+  <rect x="5" y="5" width="70" height="70" rx="20" fill="#dff5ed"/>
+  <path d="M40 14 63 27v26L40 66 17 53V27Z" fill="#08795f"/>
+  <path d="m40 23 15 9v17l-15 9-15-9V32Z" fill="#1fb58c"/>
+  <path d="m40 29 11 11-11 11-11-11Z" fill="#ffc857"/>
+  <path d="m40 29 11 11-11 11V29Z" fill="#ff976f"/>
+</svg>

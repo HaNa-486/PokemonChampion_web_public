@@ -1,0 +1,4 @@
+patchedDependencies:
+  '@smogon/calc@0.12.0': patches/@smogon__calc@0.12.0.patch
+allowBuilds:
+  esbuild: true

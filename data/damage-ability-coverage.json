@@ -1,0 +1,14 @@
+[
+  { "id": "inner-focus", "classification": "automatic-supported", "scope": "The pinned engine protects against explicit Intimidate. Flinching and turn history are outside a successful-hit damage calculation.", "risks": ["This is not a full turn simulator."] },
+  { "id": "multiscale", "classification": "requires-explicit-condition", "scope": "The pinned engine applies the reduction at full HP. Supply current HP explicitly.", "risks": ["Assumed current HP must match the scenario."] },
+  { "id": "sand-veil", "classification": "out-of-scope-non-damage-effect", "scope": "Evasion does not change the damage of an already successful selected hit. Sand weather must be chosen explicitly.", "risks": ["Hit probability is not included."] },
+  { "id": "rough-skin", "classification": "out-of-scope-non-damage-effect", "scope": "Contact retaliation follows the hit and is outside the displayed direct damage distribution.", "risks": ["Post-hit HP is not a complete battle outcome."] },
+  { "id": "blaze", "classification": "requires-explicit-condition", "scope": "The pinned engine checks current HP for the Fire damage boost.", "risks": ["Set current HP instead of assuming the ability is active."] },
+  { "id": "tough-claws", "classification": "automatic-supported", "scope": "The pinned engine reads the selected move's contact flag for its damage boost.", "risks": [] },
+  { "id": "torrent", "classification": "requires-explicit-condition", "scope": "The pinned engine checks current HP for the Water damage boost.", "risks": ["Set current HP instead of assuming the ability is active."] },
+  { "id": "overgrow", "classification": "requires-explicit-condition", "scope": "The pinned engine checks current HP for the Grass damage boost.", "risks": ["Set current HP instead of assuming the ability is active."] },
+  { "id": "chlorophyll", "classification": "requires-explicit-condition", "scope": "Speed uses the explicitly selected effective sun weather. It does not directly multiply attack damage.", "risks": ["Weather history is not simulated."] },
+  { "id": "cursed-body", "classification": "out-of-scope-non-damage-effect", "scope": "Move disabling after a hit does not change this successful hit's direct damage.", "risks": ["Later move availability is not simulated."] },
+  { "id": "immunity", "classification": "out-of-scope-non-damage-effect", "scope": "Poison prevention does not directly modify this hit's damage. The supplied status is treated as explicit battle state.", "risks": ["The demo does not validate every status-history combination."] },
+  { "id": "thick-fat", "classification": "automatic-supported", "scope": "The pinned engine reduces the relevant Fire and Ice attack damage.", "risks": [] }
+]
